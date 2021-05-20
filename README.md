@@ -58,6 +58,27 @@ $ rostopic echo chatter
 ```
 >>> *En caso de tener algun error relacionado a " import queue ", la solucion esta en este link https://answers.ros.org/question/362043/importerror-no-module-named-queue/ *
 
+## Compartir informacion para visualizar desde Computador externo :
+#### En Ubuntu 18.04 :
+>> correr :
+ ``` bash
+ $ roscore
+ ```
+ ``` bash
+ $ export ROS_MASTER_URI=http://[your-desktop-machine-ip]:11311
+ ```
+  >> y en la raspi correr de manera paralela :
+ ``` bash
+ $ export ROS_MASTER_URI=http://[your-desktop-machine-ip]:11311
+ ```
+ ``` bash
+ $ export ROS_IP=[la ip de la raspi]
+ ```
+ >>*Esto lo debemos hacer cata vez que vamos a correr algun programa de ros que queramos visualizar en la computadora externa*
+
+## Paso 4 : 
+#### Integrar SLAM :
+>> Yo segui el siguiente tutorial : https://github.com/NickL77/RPLidar_Hector_SLAM
 
 
 
