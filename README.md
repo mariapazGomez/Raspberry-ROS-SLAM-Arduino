@@ -80,6 +80,20 @@ $ rostopic echo chatter
 #### Integrar SLAM :
 >> Yo segui el siguiente tutorial : https://github.com/NickL77/RPLidar_Hector_SLAM
 
+## Paso 5 :
+#### Movimiento remoto + Arduino :
+
+> Utilizando el sistema de ROS , haremos que la raspberry (Master) , se conecte con el nodo de Arduino (/cmd_vel), y asi la raspi funcione como un cerebor, mientras que Arduino solo se utilizara como controlador de motores y en un futuro de los diferentes sensores.
+> > por ahora solo utilizaremos los motores.
+> > * Para comenzar debemos subir el programa a Arduino, en mi caso el programa se llama `cmd_vel_01.ino`, en este se encuentra la conexion a los motores y encoders.
+> > * Luego debemos hacer que la raspi se conecte con estos para poder hacer que los motores se muevan bajo nuestro control. Para esto utilizaremos el comando 
+> > `rosrun rosserial_python serial_node.py /dev/ttyACM0`, *con el cual nos conectamos al nodo de arduino que esta conectado a travez de la entrada USB, (/dev/ttyACM0).*
+> > En otra terminal debemos correr el comando 
+> > `rosrun teleop_twist_keyboard teleop_twist_keyboard.py` *para habilitar el control del robot por teclado.*
+> > * Con esto ya podremos controlar nuestro robot con los comandos que apareceran por consola.
+> > > *Para esto no se utilizo codigo propio, solo las siguientes librerias:*
+> > > * **
+
 
 
 
