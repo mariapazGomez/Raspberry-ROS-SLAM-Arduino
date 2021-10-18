@@ -1,69 +1,135 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
+
+# import ros stuff
 
 import rospy
-
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
-pub = None
+from nav_msgs.msg import Odometry
+from tf import transformations
 
+import math
 
-# instrucciones de movimiento :
-# doblar a la derecha = angular_z = -1
-# doblar a la izquierda = angular_z = 1
-# adelante = linear_x = 0.5
-# atraz = linear_x = -0.5
+pub_ = None
+regiones_ = {
+    'derecha': 0,
+    'derecha_adelante': 0,
+    'izquierda_adelante': 0,
+    'izquierda': 0,
+}
+
+estado_ = 0
+
+tipos_estado_ = {
+    0: 'encontrar la pared',
+    1: 'doblar a la izquierda',
+    2: 'seguir la pared',
+}
 
 def clbk_laser(msg):
-    
-    # 720 / 5 = 144
-    regiones = {
-        'R1': min(min(msg.ranges[0:44]),1),
-        'R2': min(min(msg.ranges[45:89]),1),
-        'R3': min(min(msg.ranges[90:134],1)),
-        'R4': min(min(msg.ranges[135:179]),1),
-        'R5': min(min(msg.ranges[180:224]),1),
-        'R6': min(min(msg.ranges[225:269]),1),
-        'R7': min(min(msg.ranges[270:314]),1),
-        'R8': min(min(msg.ranges[315:360]),1),
+    global regiones_
+    regiones_ = {
+        'derecha':  min(min(msg.ranges[270:314]),1),
+        'derecha_adelante': min(min(msg.ranges[315:360]),1),
+        'izquierda_adelante':  min(min(msg.ranges[45:89]),1),
+        'izquierda':   min(min(msg.ranges[0:44]),1),
     }
-    rospy.loginfo(regiones)
-    movimientos(regiones)
+
+    acciones()
 
 
+def cambiar_estado(estado):
+    global estado_, tipos_estado_
+    if estado is not estado_:
+        print 'Wall follower - [%s] - %s' % (estado, tipos_estado_[estado])
+        estado_ = estado
 
-def movimientos(regiones):
+
+def acciones():
+    global regiones_
+    regiones = regiones_
     msg = Twist()
     linear_x = 0
     angular_z = 0
-    descripcion_estado = ''
-
-    # pared a la derecha
-    if (regiones['R1'] >= 0.5)  and (regiones['R2'] >= 0.5) and (regiones['R3'] >= 0.5) and (regiones['R4'] >= 0.5) and (regiones['R5'] >= 0.5) and (regiones['R6'] < 0.5) and (regiones['R7'] < 0.5) and (regiones['R8'] > 0.4) :
-       descripcion_estado = 'caso 1 - pared a la derecha'
-       linear_x = 0.5
-       angular_z = 0
-
-    # pared adelante y a la izquierda   
-    elif (regiones['R1'] >= 0.5)  and (regiones['R2'] >= 0.5) and (regiones['R3'] >= 0.5) and (regiones['R4'] >= 0.5) and (regiones['R5'] >= 0.5) and (regiones['R6'] < 0.5) and (regiones['R7'] < 0.5) and (regiones['R8'] > 0.4) :
-       descripcion_estado = 'caso 1 - pared a la derecha'
-       linear_x = 0
-       angular_z = 1.0
-
-
-    rospy.loginfo(descripcion_estado)
-    msg.linear.x = linear_x
-    msg.angular.z = angular_z
-    pub.publish(msg)
-
     
-        
+    descripcion_estado = ''
+    
+    d = 1 # distancia maxima a un objeto
+    
+    if regiones['derecha_adelante'] > d and regiones['izquierda_adelante'] > d and regiones['derecha'] > d:
+        descripcion_estado = 'case 1 - nada'
+        cambiar_estado(0)
+    elif regiones['derecha_adelante'] < d and regiones['izquierda_adelante'] < d and regiones['izquierda'] > d and regiones['derecha'] > d:
+        descripcion_estado = 'case 2 - frente'
+        cambiar_estado(1)
+    elif regiones['derecha_adelante'] > d and regiones['izquierda_adelante'] > d and regiones['izquierda'] > d and regiones['derecha'] < d:
+        descripcion_estado = 'case 3 - frente derecha'
+        cambiar_estado(2)
+    elif regiones['derecha_adelante'] > d and regiones['izquierda_adelante'] > d and regiones['izquierda'] < d and regiones['derecha'] > d:
+        descripcion_estado = 'case 4 - frente izquierda'
+        cambiar_estado(0)
+    elif regiones['derecha_adelante'] < d and regiones['izquierda_adelante'] < d and regiones['izquierda'] > d and regiones['derecha'] < d:
+        descripcion_estado= 'case 5 - frente y dorecha'
+        cambiar_estado(1)
+    elif regiones['derecha_adelante'] < d and regiones['izquierda_adelante'] < d and regiones['izquierda'] < d and regiones['derecha'] > d:
+        descripcion_estado = 'case 6 - frente e izquierda'
+        cambiar_estado(1)
+    elif regiones['derecha_adelante'] < d and regiones['izquierda_adelante'] < d and regiones['izquierda'] < d and regiones['derecha'] < d:
+        descripcion_estado = 'case 7 - todos lados'
+        cambiar_estado(1)
+    elif regiones['derecha_adelante'] > d and regiones['izquierda_adelante'] > d and regiones['izquierda'] < d and regiones['derecha'] < d:
+        descripcion_estado = 'case 8 - adelante izquierda y derecha'
+        cambiar_estado(0)
+    else:
+        descripcion_estado = 'caso desconocido'
+        rospy.loginfo(regiones)
+
+
+
+def encontrar_pared():
+    msg = Twist()
+    msg.linear.x = 0.2
+    msg.angular.z = -0.3
+    return msg
+
+def doblar_izquierda():
+    msg = Twist()
+    msg.angular.z = 0.3
+    return msg
+
+def seguir_pared():
+    global regions_
+    
+    msg = Twist()
+    msg.linear.x = 0.5
+    return msg
+
+
 def main():
-    global pub
-    rospy.init_node('reading_laser')
-    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+    global pub_
+    
+    rospy.init_node('leyendo_laser')
+    
+    pub_ = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+    
     sub = rospy.Subscriber('/scan', LaserScan, clbk_laser)
-    rospy.spin()
+    
+    rate = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        msg = Twist()
+        if estado_ == 0:
+            msg = encontrar_pared()
+        elif estado_ == 1:
+            msg = doblar_izquierda()
+        elif estado_ == 2:
+            msg = seguir_pared()
+            pass
+        else:
+            rospy.logerr('Estado desconocido!')
+        
+        pub_.publish(msg)
+        
+        rate.sleep()
 
 if __name__ == '__main__':
     main()
-    
